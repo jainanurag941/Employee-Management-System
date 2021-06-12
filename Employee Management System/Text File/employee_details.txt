@@ -1,0 +1,2 @@
+101,Joe Adams,8500,90,130,joe@gmail.com
+102,Anurag,8000,70,100,anurag@gmail.com

@@ -1,0 +1,353 @@
+#include <iostream>
+#include <cstdlib>
+#include <iomanip>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include<windows.h>
+#include<conio.h>
+
+using namespace std;
+
+const int EMP_ID_WIDTH = 8;
+const int EMP_NAME_WIDTH = 20;
+const int EMP_EMAIL_WIDTH = 25;
+const int EMP_NUMERIC_WIDTH = 10;
+const int TOTAL_WIDTH = 100;
+
+struct Employee{
+    int empId;
+    string name;
+    double basicSalary;
+    double pf;
+    double healthInsAmt;
+    string email;
+};
+
+void login();
+void readFile(vector <Employee>& v_emp);
+void printMenu();
+void doTask(vector <Employee>& v_emp, int option);
+void addEmployee(vector <Employee>& v_emp);
+int searchEmployee(vector <Employee> v_emp, int targetEmpId);
+void saveToFile(vector <Employee> v_emp);
+void printEmployees(vector <Employee> v_emp);
+void printEmployee(Employee e);
+double getNetSalary(Employee e);
+bool deleteEmployee(vector <Employee>& v_emp, int targetEmpId);
+void modifyEmployee(vector <Employee>& v_emp, int targetEmpId);
+
+void readFile(vector <Employee>& v_emp){
+    ifstream fin("employee_details.txt");
+    if (!fin){
+        cout << "Unable to open database file employee_details.txt" << endl
+             << "Make sure that the file exists" << endl;
+             exit(1);
+    }
+    string line;
+    int recNo = 0;
+    while(!fin.eof()){
+        std::getline(fin,line);
+        recNo++;
+        istringstream iss(line);
+        string strEmpId;
+        string strName;
+        string strBasicSalary;
+        string strPf;
+        string strHealthInsAmt;
+        string strEmail;
+
+        std::getline(iss,strEmpId,',');
+        std::getline(iss,strName,',');
+        std::getline(iss,strBasicSalary,',');
+        std::getline(iss,strPf,',');
+        std::getline(iss,strHealthInsAmt,',');
+        std::getline(iss,strEmail,',');
+
+        Employee temp;
+        temp.empId = atoi(strEmpId.c_str());
+        temp.name = strName;
+        temp.basicSalary = atof(strBasicSalary.c_str());
+        temp.pf = atof(strPf.c_str());
+        temp.healthInsAmt = atof(strHealthInsAmt.c_str());
+        temp.email = strEmail;
+
+        v_emp.push_back(temp);
+    }
+    fin.close();
+}
+
+void printMenu(){
+    cout << ">>>>> PROGRAM MENU <<<<<" << endl << endl;
+    cout << "1. Add Employee " << endl;
+    cout << "2. Print Employee Report" << endl;
+    cout << "3. Modify Existing Employee" << endl;
+    cout << "4. Search Employee" << endl;
+    cout << "5. Delete Employee" << endl;
+    cout << "6. Save" << endl;
+    cout << "7. Exit" << endl;
+}
+
+void addEmployee(vector <Employee>& v_emp){
+    Employee temp;
+    bool isDuplicate = false;
+    do{
+        cout << "Emp Id: ";
+        cin >> temp.empId;
+        isDuplicate = false;
+        if(searchEmployee(v_emp, temp.empId) != -1){
+            isDuplicate = true;
+            cout << "Employee Id: " << temp.empId
+                 << " already exists, please input unique Id " << endl;
+        }
+    }while(isDuplicate);
+    cout << "Name: ";
+    cin.clear();
+    cin.ignore(INT_MAX, '\n');
+    std::getline(cin, temp.name);
+    cout << "Basic Salary($): ";
+    cin >> temp.basicSalary;
+    cout << "PF($): ";
+    cin >> temp.pf;
+    cout << "Health Ins($): ";
+    cin >> temp.healthInsAmt;
+    cout << "Email: ";
+    cin.clear();
+    cin.ignore(INT_MAX, '\n');
+    std::getline(cin, temp.email);
+
+    v_emp.push_back(temp);
+    cout << "Employee with Id: " << temp.empId << " added successfully" << endl;
+    cout << "Total employees: " << v_emp.size() << endl << endl;
+}
+
+int searchEmployee(vector <Employee> v_emp, int targetEmpId){
+    for(int i = 0; i < v_emp.size(); ++i){
+        if(v_emp[i].empId == targetEmpId){
+            return i;
+        }
+    }
+    return -1;
+}
+void doTask(vector <Employee>& v_emp, int option){
+    int targetEmpId;
+    int index;
+    switch(option){
+        case 1: addEmployee(v_emp);
+            break;
+        case 2: printEmployees(v_emp);
+            break;
+        case 3:
+            cout << "\nEnter Employee Id to be Modified: ";
+            cin >> targetEmpId;
+            modifyEmployee(v_emp, targetEmpId);
+            break;
+        case 4:
+            cout << "\nEnter Employee Id to Search: " << endl;
+            cin >> targetEmpId;
+            index = searchEmployee(v_emp, targetEmpId);
+            if (index == -1){
+                cout << "Employee with Id: " << targetEmpId << " does not exists" << endl;
+            }
+            else{
+                cout << "Employee with Id: " << targetEmpId << " found" << endl;
+                printEmployee(v_emp[index]);
+                cout << endl;
+            }
+            break;
+        case 5:
+            cout << "\nEnter Employee Id to be Deleted: ";
+            cin >> targetEmpId;
+            if(deleteEmployee(v_emp, targetEmpId)){
+                cout << "\nEmployee with Id: " << targetEmpId << " deleted successfully" << endl;
+                cout << "Please use option - 6 to save the changes permanently\n" << endl;
+            }
+            else{
+                cout << "Employee with Id: " << targetEmpId << " could not be deleted\n" << endl;
+            }
+            break;
+        case 6: saveToFile(v_emp);
+            break;
+        default: cout << "Invalid menu option chosen, valid options are from 1 - 7" << endl;
+    }
+}
+
+void printEmployees(vector <Employee> v_emp){
+    cout << endl;
+    cout << setw(EMP_ID_WIDTH) << left << "EmpId"
+         << setw(EMP_NAME_WIDTH) << left << "Name"
+         << setw(EMP_EMAIL_WIDTH) << left << "Email"
+         << setw(EMP_NUMERIC_WIDTH) << right << "Basic ($)"
+         << setw(EMP_NUMERIC_WIDTH) << right << "PF ($)"
+         << setw(EMP_NUMERIC_WIDTH) << right << "HltIns($)"
+         << setw(EMP_NUMERIC_WIDTH) << right << "Net ($)"
+         << endl;
+    cout << setw(TOTAL_WIDTH) << setfill('-') << " " << endl;
+    cout << setfill(' ');
+
+    double totalBasic = 0.0;
+    double totalPfDeduction = 0.0;
+    double totalHealthIns = 0.0;
+    double totalNetSalary = 0.0;
+
+    for(vector <Employee>::iterator it = v_emp.begin(); it != v_emp.end(); it++){
+        printEmployee(*it);
+
+        totalBasic += it->basicSalary;
+        totalPfDeduction += it->pf;
+        totalHealthIns += it->healthInsAmt;
+        totalNetSalary += getNetSalary(*it);
+    }
+    cout << setw(TOTAL_WIDTH) << setfill('-') << " " << endl;
+    cout << setfill(' ');
+
+    cout << setw(EMP_ID_WIDTH) << left << "Total"
+         << setw(EMP_NAME_WIDTH) << left << "In ($)"
+         << setw(EMP_EMAIL_WIDTH) << " "
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << right << fixed << totalBasic
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << right << fixed << totalPfDeduction
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << right << fixed << totalHealthIns
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << right << fixed << totalNetSalary
+         << endl << endl;
+}
+
+void printEmployee(Employee e){
+    cout << setw(EMP_ID_WIDTH) << left << e.empId
+         << setw(EMP_NAME_WIDTH) << left << e.name
+         << setw(EMP_EMAIL_WIDTH) << left << e.email
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << fixed << right << e.basicSalary
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << fixed << right << e.pf
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << fixed << right << e.healthInsAmt
+         << setw(EMP_NUMERIC_WIDTH) << setprecision(2) << fixed << right << getNetSalary(e)
+         << endl;
+}
+
+double getNetSalary(Employee e){
+    return e.basicSalary - (e.pf + e.healthInsAmt);
+}
+
+void saveToFile(vector <Employee> v_emp){
+    ofstream fout("employee_details.txt");
+    if(!fout){
+        cout << "Unable to open the data file employee_details.txt" << endl;
+        return;
+    }
+    int recCount = 0;
+    for(vector <Employee>::iterator it = v_emp.begin(); it != v_emp.end(); ++it){
+        fout << it->empId << "," << it->name << "," << it->basicSalary << ","
+             << it->pf << "," << it->healthInsAmt << "," << it->email;
+        recCount++;
+        if (recCount != v_emp.size()){
+            fout << endl;
+        }
+    }
+    cout << "Employee Details are saved successfully!!" << endl;
+    fout.close();
+    cout << "Total of " << recCount << " records saved successfully into the file" << endl << endl;
+}
+
+bool deleteEmployee(vector <Employee>& v_emp, int targetEmpId){
+    int index = searchEmployee(v_emp, targetEmpId);
+    if (index == -1){
+        return false;
+    }
+    cout << "\nTarget Employee with Id: " << targetEmpId << " found: " << endl;
+    printEmployee(v_emp[index]);
+    cout << "\nAre you sure to delete? Input 1 to delete, 0 to exit: ";
+    int option;
+    cin >> option;
+    if (option == 1){
+        v_emp.erase(v_emp.begin() + index);
+        return true;
+    }
+    return false;
+}
+
+void modifyEmployee(vector <Employee>& v_emp, int targetEmpId){
+    int index = searchEmployee(v_emp, targetEmpId);
+    if (index == -1){
+        cout << "\nTarget Employee with Id: " << targetEmpId << " does not exists." << endl;
+        return;
+    }
+    cout << "\nTarget Employee with Id: " << targetEmpId << " found: " << endl;
+    printEmployee(v_emp[index]);
+    cout << "\nModify details for the existing Employee" << endl;
+    Employee temp;
+    cout << "Name: ";
+    cin.clear();
+    cin.ignore(INT_MAX, '\n');
+    std::getline(cin, temp.name);
+    v_emp[index].name = temp.name;
+    cout << "Basic Salary($): ";
+    cin >> temp.basicSalary;
+    v_emp[index].basicSalary = temp.basicSalary;
+    cout << "PF($): ";
+    cin >> temp.pf;
+    v_emp[index].pf = temp.pf;
+    cout << "Health Ins($): ";
+    cin >> temp.healthInsAmt;
+    v_emp[index].healthInsAmt = temp.healthInsAmt;
+    cout << "Employee with Id: " << targetEmpId << " successfully updated !!" << endl;
+    printEmployee(v_emp[index]);
+    cout << endl;
+}
+
+int main()
+{
+    login();
+    vector <Employee> v_emp;
+    readFile(v_emp);
+    cout << "Total " << v_emp.size() << " records read from the data file" << endl << endl;
+
+    printMenu();
+
+    bool quit = false;
+    while(!quit){
+        cout << "Input your option: ";
+        int option;
+        cin >> option;
+        if(option==7){
+            quit = true;
+            system("PAUSE");
+            system("CLS");
+            cout << "\n\n\n\t\t\t\tEMPLOYEE MANAGEMENT SYSTEM BROUGHT TO YOU BY" << endl;
+            cout << "\t\t\t\t--------------------------------------------" << endl;
+            cout << "\n\n\t\t\t\t\t\tANURAG JAIN" << endl;
+            cout << "\t\t\t\t\t\t----------" << endl;
+        }
+        else{
+            doTask(v_emp, option);
+        }
+    }
+    return 0;
+}
+
+void login(){
+   string pass ="";
+   char ch;
+   cout <<"\n\n\n\t\t\t\t\tWELCOME TO EMPLOYEE MANAGEMENT SYSTEM" << endl;
+   cout << "\t\t\t\t\t-------------------------------------";
+   cout <<"\n\n\n\t\t\t\t\tEnter Your Password : ";
+   ch = getch();
+   while(ch != 13){
+      pass.push_back(ch);
+      cout << '*';
+      ch = getch();
+   }
+   if(pass == "12345"){
+   	cout<<"\n\n\n\t\t\t\t\tLOADING \n\t\t\t\t\t";
+   	for(int a=1;a<8;a++)
+	{
+		Sleep(350);
+		cout << "...";
+	}
+      cout << "\n\n\n\t\t\t\t\tACCESS GRANTED!! \n\n\n";
+
+      system("PAUSE");
+      system("CLS");
+   }else{
+      cout << "\n\n\n\t\t\t\t\tINCORRECT PASSWORD!! ACCESS DENIED...\n";
+      login();
+   }
+}
